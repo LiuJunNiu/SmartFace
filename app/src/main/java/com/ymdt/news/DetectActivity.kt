@@ -5,21 +5,22 @@ import android.graphics.Color
 import android.graphics.Point
 import android.hardware.Camera
 import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
 import android.util.DisplayMetrics
 import android.util.Size
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import com.arcsoft.face.LivenessInfo
 import com.blankj.utilcode.util.LogUtils
-import com.ymdt.face.EngineType
-import com.ymdt.face.FaceEngineHelper
+import com.google.gson.Gson
 import com.ymdt.face.model.DrawInfo
+import com.ymdt.face.model.LiveFaceInfo
+import com.ymdt.face.run.DetectVideoRunnable
 import com.ymdt.face.utils.DrawHelper
 import com.ymdt.face.utils.camera.CameraHelper
 import com.ymdt.face.utils.camera.CameraListener
+import com.ymdt.news.dialog.SaveFaceInfoAlertDialog
 import kotlinx.android.synthetic.main.activity_detect.*
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -27,57 +28,33 @@ import java.util.concurrent.ConcurrentLinkedQueue
 /**
  * 拍照提取特征并保存
  */
-const val TAKE_PICTURE_MESSAGE = 11
 
 class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListener {
 
-    private lateinit var mFaceEngineHelper: FaceEngineHelper
-    private lateinit var mDetectEngineHelper: FaceEngineHelper
-    private val mDrawHelper = DrawHelper()
     private lateinit var mCameraHelper: CameraHelper
+    private val mDrawHelper = DrawHelper()
+
     private var mCameraId = Camera.CameraInfo.CAMERA_FACING_FRONT
     private lateinit var mCamera: Camera
 
-    private val mTakePictureThread = HandlerThread("TakePictureThread")
-    private lateinit var mTakeHandler: Handler
-
-    private val mHandler = Handler()
-
     /**
      * 非阻塞队列，存储相机预览，处理预览图片
+     * 不要使用阻塞队列
      */
     private val mQueue: Queue<ByteArray> = ConcurrentLinkedQueue<ByteArray>()
+
     /**
-     * 是否识别绘制人脸框
+     * 存储人脸队列最大个数
      */
-    @Volatile
-    private var mDetectAndDraw = true
+    private val QUEUE_MAX_SIZE = 2
 
+    /**
+     * 提取出的结果
+     * 不要使用阻塞队列
+     */
+    private val mResultQueue: Queue<LiveFaceInfo> = ConcurrentLinkedQueue<LiveFaceInfo>()
 
-    private val mFaceThread = Thread {
-        mFaceEngineHelper = FaceEngineHelper(this).initEngine(EngineType.VIDEO_ENGINE)
-        while (mDetectAndDraw) {
-            if (mQueue.isNotEmpty()) {
-                val data = mQueue.poll()
-                mFaceEngineHelper.initNV21(data)
-                val liveFaceInfo = mFaceEngineHelper.detect()
-                val drawInfos = ArrayList<DrawInfo>()
-                drawInfos.add(
-                    DrawInfo(
-                        mDrawHelper.adjustRect(liveFaceInfo.rect),
-                        liveFaceInfo.livenessInfo.liveness,
-                        if (liveFaceInfo.livenessInfo.liveness == 1) Color.GREEN else Color.GRAY
-                    )
-                )
-
-                mHandler.post { mDrawHelper.draw(face_rect_view, drawInfos) }
-                LogUtils.dTag("mFaceThread:", mQueue.size)
-
-            }
-        }
-        mFaceEngineHelper.uninit()
-
-    }
+    private lateinit var mDetectAndExtractRunnable: DetectVideoRunnable
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,7 +69,6 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
 
         setContentView(R.layout.activity_detect)
 
-        mDetectEngineHelper = FaceEngineHelper(this).initEngine(EngineType.IMAGE_ENGINE)
 
         texture_view.viewTreeObserver.addOnGlobalLayoutListener(this)
         switch_button.setOnClickListener {
@@ -100,31 +76,46 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
             mCameraHelper.switchCamera()
         }
 
-        mTakePictureThread.start()
-        mTakeHandler = Handler(mTakePictureThread.looper) {
-            if (TAKE_PICTURE_MESSAGE == it.what) {
-                mCamera.takePicture(null, Camera.PictureCallback { data, camera ->
-                    //提取特征
-                    mDetectEngineHelper.initNV21(data)
-                    val faceFeature = mDetectEngineHelper.extract()
-                    LogUtils.dTag("takePicture:" + faceFeature.featureData)
-                }, null)
 
+        mDetectAndExtractRunnable = DetectVideoRunnable(this, mQueue)
+
+        mDetectAndExtractRunnable.setOnResult {
+            if (mResultQueue.size <= QUEUE_MAX_SIZE) {
+                mResultQueue.offer(it)
+            } else {
+                mResultQueue.poll()
             }
-            true
-
+            val drawInfos: MutableList<DrawInfo> = ArrayList()
+            val drawInfo = DrawInfo(
+                mDrawHelper.adjustRect(it.getRect()),
+                it.livenessInfo.getLiveness(),
+                if (LivenessInfo.ALIVE == it.livenessInfo.getLiveness()) Color.GREEN else Color.GRAY
+            )
+            drawInfos.add(drawInfo)
+            mDrawHelper.draw(face_rect_view, drawInfos)
         }
 
-        capture_button.setOnClickListener {
-            mTakeHandler.sendEmptyMessage(TAKE_PICTURE_MESSAGE)
-        }
 
-        mFaceThread.start()
+        Thread(mDetectAndExtractRunnable, "提取识别线程").start()
     }
 
 
     override fun onGlobalLayout() {
+        LogUtils.dTag("DetectActivity", "initCamera")
+
         initCamera()
+
+        capture_button.setOnClickListener {
+            //提取此时的人脸特征
+            if (mResultQueue.isNotEmpty()) {
+                val liveFaceInfo = mResultQueue.peek()
+                LogUtils.dTag("DetectActivity",Gson().toJson(liveFaceInfo.faceFeature))
+                //弹窗保存该人员特征信息
+                val dialog = SaveFaceInfoAlertDialog(DetectActivity@ this)
+                dialog.show()
+                dialog.showData(liveFaceInfo)
+            }
+        }
     }
 
     override fun onResume() {
@@ -143,7 +134,7 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
     }
 
     override fun onDestroy() {
-        mDetectAndDraw = false
+        mDetectAndExtractRunnable.stop()
         super.onDestroy()
     }
 
@@ -160,8 +151,10 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
             }
 
             override fun onPreview(data: ByteArray?, camera: Camera?) {
-                if (mQueue.size <= 2 && null != data && data.isNotEmpty()) {
-                    mQueue.add(data)
+                if (mQueue.size <= QUEUE_MAX_SIZE && null != data && data.isNotEmpty()) {
+                    mQueue.offer(data)
+                } else {
+                    mQueue.poll()
                 }
             }
 
@@ -181,12 +174,19 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
 
 
                 val previewSize = camera?.parameters?.previewSize
-                mDrawHelper.initPreviewSize(Size(previewSize!!.width, previewSize.height))
+                mDetectAndExtractRunnable.initPreviewSize(
+                    Size(
+                        previewSize!!.width,
+                        previewSize.height
+                    )
+                )
+
+                mDrawHelper.initPreviewSize(Size(previewSize.width, previewSize.height))
                     .initCanvasSize(Size(texture_view.width, texture_view.height))
                     .initOrientation(displayOrientation)
                     .initCameraId(cameraId)
-                mFaceEngineHelper.initPreviewSize(Size(previewSize?.width, previewSize?.height))
-                mDetectEngineHelper.initPreviewSize(Size(previewSize?.width, previewSize?.height))
+
+
             }
 
             override fun onCameraClosed() {

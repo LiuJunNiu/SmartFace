@@ -101,6 +101,16 @@ public class FaceEngineHelper {
         return this;
     }
 
+    public FaceEngineHelper initOriginalFaceFeature(FaceFeature faceFeature) {
+        this.mOriginalFaceFeature = faceFeature;
+        return this;
+    }
+
+    public FaceEngineHelper initComparedFaceFeature(FaceFeature faceFeature) {
+        this.mComparedFaceFeature = faceFeature;
+        return this;
+    }
+
     /**
      * 激活，必须的
      *
@@ -112,7 +122,7 @@ public class FaceEngineHelper {
     }
 
 
-    private FaceSimilar similar() {
+    public FaceSimilar similar() {
         FaceSimilar faceSimilar = new FaceSimilar();
         mFaceEngine.compareFaceFeature(mOriginalFaceFeature, mComparedFaceFeature, faceSimilar);
         return faceSimilar;
@@ -147,6 +157,8 @@ public class FaceEngineHelper {
             liveFaceInfo.setLivenessInfo(livenessInfo);
             return liveFaceInfo;
         }
+        liveFaceInfo.setData(mNV21);
+        liveFaceInfo.setSize(mPreviewSize);
         return liveFaceInfo;
     }
 
@@ -157,10 +169,34 @@ public class FaceEngineHelper {
      * @return faceFeature
      */
     public FaceFeature extract() {
-        FaceInfo faceInfo = detect();
+        return extract(detect());
+    }
+
+    /**
+     * 提取人脸特征信息
+     *
+     * @param faceInfo 人脸框信息
+     * @return faceFeature
+     */
+    public FaceFeature extract(FaceInfo faceInfo) {
         FaceFeature faceFeature = new FaceFeature();
         mFaceEngine.extractFaceFeature(mNV21, mPreviewSize.getWidth(), mPreviewSize.getHeight(), FaceEngine.CP_PAF_NV21, faceInfo, faceFeature);
         return faceFeature;
+    }
+
+    /**
+     * 推荐使用该方法避免二次识别调用减少提取时间
+     *
+     * @return LiveFaceInfo
+     */
+    public LiveFaceInfo detectAndExtract() {
+        LiveFaceInfo liveFaceInfo = detect();
+        FaceFeature faceFeature = new FaceFeature();
+        mFaceEngine.extractFaceFeature(mNV21, mPreviewSize.getWidth(), mPreviewSize.getHeight(), FaceEngine.CP_PAF_NV21, liveFaceInfo, faceFeature);
+        liveFaceInfo.setFaceFeature(faceFeature);
+        liveFaceInfo.setSize(mPreviewSize);
+        liveFaceInfo.setData(mNV21);
+        return liveFaceInfo;
     }
 
     public void uninit() {
