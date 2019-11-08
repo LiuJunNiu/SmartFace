@@ -1,6 +1,7 @@
 package com.ymdt.face;
 
 import android.content.Context;
+import android.util.Log;
 import android.util.Size;
 
 import com.arcsoft.face.ErrorInfo;
@@ -20,6 +21,8 @@ import java.util.List;
  * @date 2019/11/4 3:56 PM
  */
 public class FaceEngineHelper {
+
+    private static final String TAG = "FaceEngineHelper";
 
     private Context mContext;
     private FaceEngine mFaceEngine;
@@ -115,6 +118,7 @@ public class FaceEngineHelper {
      */
     public boolean active() {
         int activeCode = mFaceEngine.activeOnline(mContext, Constants.APP_ID, Constants.SDK_KEY);
+        Log.i(TAG, "虹软激活code:" + activeCode);
         return ErrorInfo.MOK == activeCode || ErrorInfo.MERR_ASF_ALREADY_ACTIVATED == activeCode;
     }
 

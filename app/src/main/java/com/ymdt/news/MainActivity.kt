@@ -11,12 +11,19 @@ import com.blankj.utilcode.util.ToastUtils
 import com.ymdt.face.EngineType
 import com.ymdt.face.FaceEngineHelper
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private val REQUEST_PERMISSION_CODE = 10
     private val REQUEST_PERMISSIONS =
-        arrayOf(android.Manifest.permission.CAMERA, Manifest.permission.READ_PHONE_STATE)
+        arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.INTERNET,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,12 +44,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         active_btn.setOnClickListener {
-            val faceEngineHelper = FaceEngineHelper(baseContext).initEngine(EngineType.VIDEO_ENGINE)
-            val active = faceEngineHelper.active()
-            if (active) {
-                ToastUtils.showShort("人脸引擎已激活")
-            } else {
-                ToastUtils.showShort("激活失败")
+            GlobalScope.launch {
+
+                val faceEngineHelper =
+                    FaceEngineHelper(baseContext).initEngine(EngineType.VIDEO_ENGINE)
+                val active = faceEngineHelper.active()
+                if (active) {
+                    ToastUtils.showShort("人脸引擎已激活")
+                } else {
+                    ToastUtils.showShort("激活失败")
+                }
             }
         }
 
