@@ -1,5 +1,6 @@
 package com.ymdt.face.model;
 
+import android.graphics.Rect;
 import android.util.Size;
 
 import com.arcsoft.face.FaceFeature;
@@ -11,7 +12,12 @@ import com.arcsoft.face.LivenessInfo;
  * @des 包装类 包含活体信息,人脸特征信息
  * @date 2019/11/6 6:00 PM
  */
-public class LiveFaceInfo extends FaceInfo {
+public class LiveFaceInfo {
+
+    /**
+     * 人脸特征
+     */
+    private FaceInfo faceInfo = new FaceInfo();
     /**
      * 活体信息
      */
@@ -63,11 +69,27 @@ public class LiveFaceInfo extends FaceInfo {
         this.size = size;
     }
 
-    public LiveFaceInfo wrap(FaceInfo faceInfo) {
-        setRect(faceInfo.getRect());
-        setOrient(faceInfo.getOrient());
-        setFaceId(faceInfo.getFaceId());
-        return this;
+    public FaceInfo getFaceInfo() {
+        return faceInfo;
     }
 
+    public void setFaceInfo(FaceInfo faceInfo) {
+        this.faceInfo = faceInfo;
+    }
+
+
+    /**
+     * 是否真的包含人脸
+     * @return boolean
+     */
+    public boolean isHasFace() {
+        if (null == faceInfo) {
+            return false;
+        }
+        if (null == faceInfo.getRect()) {
+            return false;
+        }
+        Rect rect = faceInfo.getRect();
+        return rect.width() > 0 && rect.height() > 0;
+    }
 }

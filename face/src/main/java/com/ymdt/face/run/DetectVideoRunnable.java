@@ -68,7 +68,7 @@ public class DetectVideoRunnable implements Runnable {
                     byte[] data = mQueue.poll();
                     mFaceEngineHelper.initNV21(data);
                     LiveFaceInfo liveFaceInfo = mFaceEngineHelper.detectAndExtract();
-                    if (null != mOnResult) {
+                    if (null != mOnResult && liveFaceInfo.isHasFace()) {
                         mOnResult.result(liveFaceInfo);
                     }
                 } else {

@@ -9,8 +9,10 @@ import com.ymdt.face.EngineType;
 import com.ymdt.face.FaceEngineHelper;
 import com.ymdt.face.model.LiveFaceInfo;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,12 +32,12 @@ public class CompareVideoRunnable implements Runnable {
      * key:身份证号或人员信息等
      * value:人脸特征
      */
-    private volatile Map<Object, FaceFeature> mMap;
+    private volatile Map<? extends Object, FaceFeature> mMap = new HashMap<>();
 
     /**
      * 提取到的人员特征队列
      */
-    private Queue<LiveFaceInfo> mQueue;
+    private Queue<LiveFaceInfo> mQueue = new ConcurrentLinkedQueue<>();
 
     /**
      * 引擎辅助
@@ -56,31 +58,39 @@ public class CompareVideoRunnable implements Runnable {
 
     private OnResult mOnResult;
 
-    public CompareVideoRunnable(Context context, Map<Object, FaceFeature> map, Queue<LiveFaceInfo> dataQueue) {
+    public CompareVideoRunnable(Context context) {
         this.mContext = context;
+        this.mFaceEngineHelper = new FaceEngineHelper(mContext).initEngine(EngineType.VIDEO_ENGINE);
+    }
+
+    public CompareVideoRunnable initMap(Map<Object, FaceFeature> map) {
         this.mMap = map;
+        return this;
+    }
+
+    public CompareVideoRunnable initQueue(Queue<LiveFaceInfo> dataQueue) {
         this.mQueue = dataQueue;
+        return this;
     }
 
     public void setOnResult(OnResult onResult) {
         this.mOnResult = onResult;
     }
 
-    public CompareVideoRunnable initSimilar(float similar){
+    public CompareVideoRunnable initSimilar(float similar) {
         this.mSimilar = similar;
         return this;
     }
 
     @Override
     public void run() {
-        mFaceEngineHelper = new FaceEngineHelper(mContext).initEngine(EngineType.VIDEO_ENGINE);
         Log.i(TAG, "run: 线程启动");
         while (mCompare) {
             try {
                 if (null != mQueue && !mQueue.isEmpty()) {
                     LiveFaceInfo liveFaceInfo = mQueue.poll();
                     mFaceEngineHelper.initOriginalFaceFeature(liveFaceInfo.faceFeature);
-                    for (Map.Entry<Object, FaceFeature> entry : mMap.entrySet()) {
+                    for (Map.Entry<? extends Object, FaceFeature> entry : mMap.entrySet()) {
                         mFaceEngineHelper.initComparedFaceFeature(entry.getValue());
                         FaceSimilar faceSimilar = mFaceEngineHelper.similar();
                         if (faceSimilar.getScore() >= mSimilar) {

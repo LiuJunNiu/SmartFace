@@ -80,6 +80,7 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
         mDetectAndExtractRunnable = DetectVideoRunnable(this, mQueue)
 
         mDetectAndExtractRunnable.setOnResult {
+            LogUtils.dTag("TAG", Gson().toJson(it.faceFeature.featureData))
             if (mResultQueue.size <= QUEUE_MAX_SIZE) {
                 mResultQueue.offer(it)
             } else {
@@ -87,7 +88,7 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
             }
             val drawInfos: MutableList<DrawInfo> = ArrayList()
             val drawInfo = DrawInfo(
-                mDrawHelper.adjustRect(it.getRect()),
+                mDrawHelper.adjustRect(it.faceInfo.getRect()),
                 it.livenessInfo.getLiveness(),
                 if (LivenessInfo.ALIVE == it.livenessInfo.getLiveness()) Color.GREEN else Color.GRAY
             )
@@ -109,7 +110,7 @@ class DetectActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutListe
             //提取此时的人脸特征
             if (mResultQueue.isNotEmpty()) {
                 val liveFaceInfo = mResultQueue.peek()
-                LogUtils.dTag("DetectActivity",Gson().toJson(liveFaceInfo.faceFeature))
+                LogUtils.dTag("DetectActivity", Gson().toJson(liveFaceInfo.faceFeature.featureData))
                 //弹窗保存该人员特征信息
                 val dialog = SaveFaceInfoAlertDialog(DetectActivity@ this)
                 dialog.show()

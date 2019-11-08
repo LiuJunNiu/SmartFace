@@ -143,7 +143,7 @@ public class FaceEngineHelper {
             return liveFaceInfo;
         }
         FaceInfo faceInfo = faceInfoList.get(0);
-        liveFaceInfo.wrap(faceInfo);
+        liveFaceInfo.setFaceInfo(faceInfo);
         if (mLiving) {
             mFaceEngine.process(mNV21, mPreviewSize.getWidth(), mPreviewSize.getHeight(),
                     FaceEngine.CP_PAF_NV21, faceInfoList,
@@ -169,7 +169,8 @@ public class FaceEngineHelper {
      * @return faceFeature
      */
     public FaceFeature extract() {
-        return extract(detect());
+        LiveFaceInfo liveFaceInfo = detect();
+        return extract(liveFaceInfo.getFaceInfo());
     }
 
     /**
@@ -192,12 +193,17 @@ public class FaceEngineHelper {
     public LiveFaceInfo detectAndExtract() {
         LiveFaceInfo liveFaceInfo = detect();
         FaceFeature faceFeature = new FaceFeature();
-        mFaceEngine.extractFaceFeature(mNV21, mPreviewSize.getWidth(), mPreviewSize.getHeight(), FaceEngine.CP_PAF_NV21, liveFaceInfo, faceFeature);
+        mFaceEngine.extractFaceFeature(mNV21,
+                mPreviewSize.getWidth(), mPreviewSize.getHeight(),
+                FaceEngine.CP_PAF_NV21,
+                liveFaceInfo.getFaceInfo(),
+                faceFeature);
         liveFaceInfo.setFaceFeature(faceFeature);
         liveFaceInfo.setSize(mPreviewSize);
         liveFaceInfo.setData(mNV21);
         return liveFaceInfo;
     }
+
 
     public void uninit() {
         synchronized (FaceEngineHelper.class) {

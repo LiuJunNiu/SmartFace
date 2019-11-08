@@ -35,6 +35,11 @@ public class CameraHelper implements Camera.PreviewCallback {
     private Integer specificCameraId = null;
     private CameraListener cameraListener;
 
+    /**
+     * 初始化相机完成
+     */
+    private boolean startCompleted = false;
+
     private CameraHelper(CameraHelper.Builder builder) {
         previewDisplayView = builder.previewDisplayView;
         specificCameraId = builder.specificCameraId;
@@ -61,6 +66,27 @@ public class CameraHelper implements Camera.PreviewCallback {
             previewDisplayView.setScaleX(-1);
         }
     }
+
+
+    /**
+     * 控制相机生命周期
+     */
+    public void onResume() {
+        if (startCompleted && isStopped()) {
+            start();
+        }
+    }
+
+    public void onPause() {
+        if (startCompleted && !isStopped()) {
+            stop();
+        }
+    }
+
+    public void onDestory() {
+        release();
+    }
+
 
     public void start() {
         synchronized (this) {
@@ -120,12 +146,15 @@ public class CameraHelper implements Camera.PreviewCallback {
                 if (cameraListener != null) {
                     cameraListener.onCameraOpened(mCamera, mCameraId, displayOrientation, isMirror);
                 }
+                startCompleted = true;
             } catch (Exception e) {
                 if (cameraListener != null) {
                     cameraListener.onCameraError(e);
                 }
+                startCompleted = false;
             }
         }
+
     }
 
     private int getCameraOri(int rotation) {
@@ -162,6 +191,7 @@ public class CameraHelper implements Camera.PreviewCallback {
     }
 
     public void stop() {
+        startCompleted = false;
         synchronized (this) {
             if (mCamera == null) {
                 return;
@@ -173,6 +203,7 @@ public class CameraHelper implements Camera.PreviewCallback {
             if (cameraListener != null) {
                 cameraListener.onCameraClosed();
             }
+
         }
     }
 
@@ -328,6 +359,7 @@ public class CameraHelper implements Camera.PreviewCallback {
             }
         }
     }
+
     public boolean switchCamera() {
         if (Camera.getNumberOfCameras() < 2) {
             return false;

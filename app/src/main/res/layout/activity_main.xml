@@ -32,4 +32,10 @@
         android:layout_height="wrap_content"
         android:text="提取人脸特征" />
 
+    <Button
+        android:id="@+id/compare_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="对比识别" />
+
 </LinearLayout>

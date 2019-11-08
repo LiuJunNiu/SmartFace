@@ -55,6 +55,10 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(baseContext, DetectActivity::class.java)
             startActivity(intent)
         }
+        compare_btn.setOnClickListener {
+            val intent = Intent(baseContext, CompareActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun allPermissionGranted() = REQUEST_PERMISSIONS.all {

@@ -63,9 +63,9 @@ class PreviewActivity : AppCompatActivity(), ViewTreeObserver.OnGlobalLayoutList
             override fun onPreview(data: ByteArray?, camera: Camera?) {
                 face_rect_view.clearFaceInfo()
                 mFaceEngineHelper.initNV21(data)
-                val faceInfo = mFaceEngineHelper.detect()
+                val liveFaceInfo = mFaceEngineHelper.detect()
                 val drawInfos = ArrayList<DrawInfo>()
-                drawInfos.add(DrawInfo(mDrawHelper.adjustRect(faceInfo.rect), 1, Color.GREEN))
+                drawInfos.add(DrawInfo(mDrawHelper.adjustRect(liveFaceInfo.faceInfo.rect), 1, Color.GREEN))
                 mDrawHelper.draw(face_rect_view, drawInfos)
 
 
