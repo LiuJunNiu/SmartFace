@@ -46,6 +46,8 @@ public class FaceEngineHelper {
      */
     private volatile boolean mLiving = true;
 
+    private static final int MASK = FaceEngine.ASF_FACE_DETECT | FaceEngine.ASF_LIVENESS | FaceEngine.ASF_FACE_RECOGNITION;
+
     public FaceEngineHelper(Context context) {
         this.mContext = context;
     }
@@ -59,12 +61,14 @@ public class FaceEngineHelper {
         mFaceEngine = new FaceEngine();
         switch (engineType) {
             case IMAGE_ENGINE:
+            case LIVING_ENGINE:
+                //活体检测
                 //提取、识别
                 mFaceEngine.init(mContext,
                         FaceEngine.ASF_DETECT_MODE_IMAGE,
                         FaceEngine.ASF_OP_0_ONLY,
                         16, 1,
-                        FaceEngine.ASF_FACE_RECOGNITION | FaceEngine.ASF_FACE_DETECT);
+                        MASK);
                 return this;
             case VIDEO_ENGINE:
                 //只能负责提取，识别需要使用image_engine
@@ -72,14 +76,7 @@ public class FaceEngineHelper {
                         FaceEngine.ASF_DETECT_MODE_VIDEO,
                         FaceEngine.ASF_OP_0_HIGHER_EXT,
                         16, 1,
-                        FaceEngine.ASF_FACE_DETECT | FaceEngine.ASF_LIVENESS);
-                return this;
-            case LIVING_ENGINE:
-                //活体检测
-                mFaceEngine.init(mContext,
-                        FaceEngine.ASF_DETECT_MODE_IMAGE,
-                        FaceEngine.ASF_OP_0_ONLY,
-                        16, 1, FaceEngine.ASF_LIVENESS);
+                        MASK);
                 return this;
             default:
                 return this;

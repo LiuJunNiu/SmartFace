@@ -30,7 +30,7 @@ public class DetectVideoRunnable implements Runnable {
     /**
      * 引擎辅助
      */
-    private FaceEngineHelper mFaceEngineHelper;
+    private FaceEngineHelper mDetectEngineHelper;
 
     /**
      * 图片存储队列
@@ -49,25 +49,25 @@ public class DetectVideoRunnable implements Runnable {
                                Queue<byte[]> dataQueue) {
         this.mContext = context;
         this.mQueue = dataQueue;
+        mDetectEngineHelper = new FaceEngineHelper(mContext);
+        mDetectEngineHelper.initEngine(EngineType.VIDEO_ENGINE);
     }
 
     public DetectVideoRunnable initPreviewSize(Size size) {
-        mFaceEngineHelper.initPreviewSize(size);
+        mDetectEngineHelper.initPreviewSize(size);
         return this;
     }
 
 
     @Override
     public void run() {
-        mFaceEngineHelper = new FaceEngineHelper(mContext);
-        mFaceEngineHelper.initEngine(EngineType.VIDEO_ENGINE);
         Log.i(TAG, "run: 线程启动");
         while (mDetect) {
             try {
                 if (null != mQueue && !mQueue.isEmpty()) {
                     byte[] data = mQueue.poll();
-                    mFaceEngineHelper.initNV21(data);
-                    LiveFaceInfo liveFaceInfo = mFaceEngineHelper.detectAndExtract();
+                    mDetectEngineHelper.initNV21(data);
+                    LiveFaceInfo liveFaceInfo = mDetectEngineHelper.detectAndExtract();
                     if (null != mOnResult && liveFaceInfo.isHasFace()) {
                         mOnResult.result(liveFaceInfo);
                     }
@@ -87,8 +87,8 @@ public class DetectVideoRunnable implements Runnable {
      */
     private void uninit() {
         synchronized (DetectVideoRunnable.class) {
-            if (null != mFaceEngineHelper) {
-                mFaceEngineHelper.uninit();
+            if (null != mDetectEngineHelper) {
+                mDetectEngineHelper.uninit();
             }
         }
     }
